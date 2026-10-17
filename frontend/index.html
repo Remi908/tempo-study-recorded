@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Listen to nine recorded audio clips and share how calming each one feels."><title>Tempo — Listening Room</title><link rel="icon" href="./favicon.svg"><link rel="stylesheet" href="./styles.css"><script src="./config.js" defer></script><script src="./app.js" defer></script></head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">≋</span>tempo<span class="brand-divider"></span><span class="brand-caption">THE LISTENING ROOM</span></a><span class="header-note">A little room to listen.</span></header>
+<main>
+ <section class="intro"><div><div class="eyebrow"><span class="tiny-line"></span>A MOMENT FOR MUSIC</div><h1>Slow down. Tune in.</h1><p>Listen to something new. Notice how it feels. Make your voice part of the music.</p></div><div class="intro-note"><span aria-hidden="true">♫</span><div>Made for a quiet moment.<br><span>Headphones recommended</span></div></div></section>
+ <div class="mode-bar"><div><span id="connection-dot" class="status-dot"></span><strong id="connection">Connecting to the listening room…</strong></div><span id="progress" class="connection-label">9 listening moments</span></div>
+ <div id="message" class="error" role="alert" hidden></div>
+ <div class="listening-grid">
+  <aside class="preferences card"><div class="section-title"><span class="step-number">01</span><h2>Make it your moment</h2></div><p class="section-description">Just your username. We’ll choose the pace.</p>
+   <form id="join-form"><label class="field-label" for="username">Your username</label><input class="username-input" id="username" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_-]{2,32}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. quiet_listener"><p class="field-hint">Use the same username every time you visit.</p><button class="secondary join-button" id="join" type="submit">Start listening <span aria-hidden="true">→</span></button></form>
+   <div class="automatic-tempo"><div class="auto-mark" aria-hidden="true">♫</div><span class="eyebrow">LET THE MUSIC COME TO YOU</span><h3>A new pace.<br>Every time.</h3><p>We’ll select a tempo you haven’t heard before. All you need to do is listen.</p></div>
+   <div class="session-progress" aria-label="Listening progress"><div id="progress-dots" aria-hidden="true"></div><p id="progress-caption">Nine tempos. Nine different moments.</p></div>
+   <button id="generate" class="primary generate" disabled><span>Load next audio</span><span aria-hidden="true">→</span></button><p id="button-note" class="button-note">Enter your username to begin.</p>
+  </aside>
+  <section class="player-card card"><div class="section-title"><span class="step-number">02</span><h2>Just listen</h2><span class="duration-pill"><span></span>30 seconds</span></div>
+   <div class="audio-art" id="audio-art"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-orbit orbit-three"></div><div class="art-orbit orbit-four"></div><div class="art-halo"></div><div class="record"><div class="record-lines"></div><div class="record-label"><b aria-hidden="true">≋</b><span>tempo</span><i></i></div></div><span class="art-tag"><span></span>YOUR NEXT QUIET MOMENT</span></div>
+   <div class="player-body"><div class="track-meta"><div><h3 id="track-title">Something new awaits</h3><p id="track-description">Enter your username. We’ll take care of the music.</p></div><span class="headphone-badge" aria-hidden="true">♫</span></div>
+   <div class="transport"><button id="play" class="play" disabled aria-label="Play audio">▶</button><span class="time" id="elapsed">0:00</span><div class="waveform" id="waveform" aria-hidden="true"></div><span class="time">0:30</span><div class="volume-control"><label for="volume" aria-label="Volume">♪</label><input id="volume" type="range" min="0" max="1" step="0.05" value="0.6" aria-label="Volume"></div></div>
+   <div class="player-bottom"><span>One new tempo for every listening moment</span><span>Find a comfortable volume.</span></div><audio id="audio" preload="auto"></audio></div>
+  </section>
+ </div>
+ <section class="rating-card card" id="rating-card"><div class="rating-heading"><div class="section-title"><span class="step-number">03</span><h2 id="rating-title">How calming did it feel?</h2></div><p id="rating-description">There’s no right answer. Go with how this piece felt to you.</p></div>
+ <div class="rating-options" id="ratings" role="radiogroup" aria-label="How calming was the audio?">
+ <button role="radio" aria-checked="false" data-rating="1" disabled><span class="face" aria-hidden="true">☹</span><span>1</span><small>Not at all</small></button>
+ <button role="radio" aria-checked="false" data-rating="2" disabled><span class="face" aria-hidden="true">◡</span><span>2</span><small>A little</small></button>
+ <button role="radio" aria-checked="false" data-rating="3" disabled><span class="face" aria-hidden="true">○</span><span>3</span><small>Moderately</small></button>
+ <button role="radio" aria-checked="false" data-rating="4" disabled><span class="face" aria-hidden="true">☺</span><span>4</span><small>Very</small></button>
+ <button role="radio" aria-checked="false" data-rating="5" disabled><span class="face" aria-hidden="true">☻</span><span>5</span><small>Extremely</small></button></div>
+ <div class="rating-submit"><span id="rating-note">Listen to the full clip, then share your response.</span><button id="submit" class="primary" disabled>Submit rating <span aria-hidden="true">✓</span></button></div></section>
+ <div class="assurances"><div><span aria-hidden="true">↻</span><span>No repeated tempos</span></div><div><span aria-hidden="true">≋</span><span>Recordings organized by tempo</span></div><div><span aria-hidden="true">✓</span><span>Only the essentials collected</span></div></div>
+ <p class="privacy-note">Your response records your username, rating, and the audio tempo label. Internal request IDs and tempo history prevent repeats. Choose a pseudonym and keep it consistent.</p>
+</main><footer><span class="footer-brand">tempo<span> / </span>a little room to listen.</span><span>Made with care. Listened to by you.</span></footer>
+</body></html>

@@ -1,0 +1,5 @@
+# Web environment: Python 3.10+. Keep the existing audio-analysis environment separate. No model runs.
+fastapi>=0.115.6,<1
+uvicorn>=0.30.6,<1
+python-dotenv>=1.0.1,<2
+pydantic>=2.10,<3

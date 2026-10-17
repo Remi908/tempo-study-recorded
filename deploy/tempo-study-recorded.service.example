@@ -1,0 +1,16 @@
+[Unit]
+Description=Tempo listening study API
+After=network.target
+
+[Service]
+# Replace all example paths and the user before installing this service.
+User=YOUR_LINUX_USERNAME
+WorkingDirectory=/absolute/path/to/tempo-study-recorded/backend
+EnvironmentFile=/absolute/path/to/tempo-study-recorded/backend/.env
+ExecStart=/absolute/path/to/web-python/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8001 --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

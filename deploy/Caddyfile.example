@@ -1,0 +1,5 @@
+# Replace with a hostname you control, whose DNS points to this server.
+# Your server must be reachable on ports 80/443 for this deployment option.
+audio-api.your-domain.com {
+    reverse_proxy 127.0.0.1:8001
+}
