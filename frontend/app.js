@@ -38,7 +38,7 @@
   $('submit').textContent=state.saving?'Saving…':state.rated?'Rating saved ✓':'Submit rating ✓';
   $('rating-title').textContent=complete?'Thank you for listening.':state.rated?'Your response is saved.':'How calming did it feel?';
   $('rating-description').textContent=complete?(p.rated===total?'Your listening session is complete. Thank you for sharing your responses.':`All ${total} tempos have been attempted. ${p.rated} responses were saved; some audio requests were unavailable.`):state.rated?'Ready for another moment? A different tempo is waiting.':'There’s no right answer. Go with how this piece felt to you.';
-  $('rating-note').textContent=state.rated?'Your username, rating, and audio tempo have been saved.':state.ended?'Choose the response that feels right.':'Listen, then select “Stop and rate” whenever you’re ready.';
+  $('rating-note').textContent=state.rated?'Your username, rating, and audio tempo have been saved.':state.ended?'Choose the response that feels right.':'Pause the audio whenever you’re ready to rate.';
   $('audio-art').classList.toggle('busy',state.busy);
  }
  async function checkHealth(){
@@ -81,7 +81,7 @@
  $('stop-and-rate').addEventListener('click',()=>{if(!canStopAndRate())return;audio.pause();state.ended=true;render();choices[0].focus();});
  $('play').addEventListener('click',async()=>{try{if(audio.paused)await audio.play();else audio.pause();}catch{message('Playback could not start. Please try pressing play again.');}});
  audio.addEventListener('play',()=>{$('play').textContent='Ⅱ';$('play').setAttribute('aria-label','Pause audio');$('audio-art').classList.add('is-playing');});
- audio.addEventListener('pause',()=>{$('play').textContent='▶';$('play').setAttribute('aria-label','Play audio');$('audio-art').classList.remove('is-playing');});
+ audio.addEventListener('pause',()=>{$('play').textContent='▶';$('play').setAttribute('aria-label','Play audio');$('audio-art').classList.remove('is-playing');if(state.current?.status==='ready'&&!state.busy&&!state.rated&&!state.saving&&audio.currentTime>0){state.ended=true;render();}});
  audio.addEventListener('ended',()=>{state.ended=true;render();});
  audio.addEventListener('error',()=>{if(audio.getAttribute('src')){state.retryAudio=true;message('Audio playback failed. Select “Load audio again”.');render();}});
  audio.addEventListener('timeupdate',()=>{const t=Math.floor(audio.currentTime||0);$('elapsed').textContent=`${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;Array.from($('waveform').children).forEach((bar,i)=>bar.classList.toggle('elapsed',i/50<audio.currentTime/30));$('stop-and-rate').disabled=!canStopAndRate();});
