@@ -42,23 +42,22 @@ Examples:
 | `105bpm/piano/take2.flac` | 105 BPM |
 | `BPM_120/clip.wav` | 120 BPM |
 | `tempo_135/clip.wav` | 135 BPM |
-| `150/clip.wav` | 150 BPM |
-| `165/clip.wav` | 165 BPM |
-| `180/clip.wav` | 180 BPM |
 
-Simple numeric folder names are recommended. The nine supported labels remain 60, 75, 90, 105, 120, 135, 150, 165 and 180. Nested non-tempo subfolders are allowed. Filenames do not affect labels. Paths with conflicting tempo folders (such as `60/75/clip.wav`) are skipped. Identical playback audio found under different tempo labels is excluded with a diagnostic message; duplicates under the same label count as one recording.
+Simple numeric folder names are recommended. The six active labels are 60, 75, 90, 105, 120 and 135. Recordings labeled 150, 165 or 180 are skipped. Nested non-tempo subfolders are allowed. Filenames do not affect labels. Paths with conflicting tempo folders (such as `60/75/clip.wav`) are skipped. Identical playback audio found under different tempo labels is excluded with a diagnostic message; duplicates under the same label count as one recording.
 
-All nine categories need at least one usable recording before the study enables new trials. WAV and FLAC files must contain at least 30 seconds of finite non-silent mono/stereo audio. These are playback checks, not tempo measurements.
+All six categories need at least one usable recording before the study enables new trials. WAV and FLAC files must contain at least 30 seconds of finite non-silent mono/stereo audio. These are playback checks, not tempo measurements.
 
 ## Preserved study flow
 
-- The participant supplies a username, receives a random unused tempo, listens for 30 seconds, and rates calmingness from 1 to 5.
+- The participant supplies a username, receives a random unused tempo, listens for up to 30 seconds, can select **Stop and rate** after playback starts, and rates calmingness from 1 to 5.
 - Tempos remain hidden in the participant flow. Another tab, refresh, or HTTP retry resumes an existing active request.
-- Every attempted tempo remains used for the same username, including failures. The session ends after nine distinct attempts and completion of any active trial.
+- Every attempted tempo remains used for the same username, including failures. The session ends after six distinct active-tempo attempts and completion of any active trial.
 - The same recording cannot be assigned twice to one username. Different participants may receive the same recording. A participant can replay the current clip.
 - Source files stay untouched. The first 30 seconds are prepared as stereo 8-kHz, 16-bit WAV with DC removal and peak limiting, as in the earlier website. No time stretching or music generation occurs.
 
 The existing audio interpreter (`AUDIO_PYTHON`, or legacy `MODEL_PYTHON`) supplies NumPy, SoundFile and Librosa for playback preparation. Librosa is only used for sample-rate conversion when needed. No evaluator repository, checkpoint, training dataset, GPU or model-trust setting is used. Old unused model settings in `.env` may remain; they have no effect on this version.
+
+Existing saved ratings at every tempo remain in the database and CSV. Progress counts only the six active tempos. On startup, unfinished requests outside this set are marked failed so returning users can continue. The CSV does not record listening duration.
 
 ## Responses and provenance
 
@@ -85,4 +84,6 @@ Restart after adding or changing recordings. `STATE_DIR/folder-index.json` is re
 
 ## Verification
 
-Run `python -m unittest discover -s tests -v` with the test dependencies (web requirements plus httpx, NumPy, SoundFile, Librosa), and `node --check frontend/app.js`. Tests exercise folder parsing, label conflicts, actual indexing/playback, nine-tempo non-repeat flow, data migration and export. Audio fixtures are only test data; actual server recordings must still pass startup playback checks.
+Run `python -m unittest discover -s tests -v` with the test dependencies (web requirements plus httpx, NumPy, SoundFile, Librosa), and `node --check frontend/app.js`. Tests exercise folder parsing, label conflicts, actual indexing/playback, six-tempo non-repeat flow, data migration and export. Audio fixtures are only test data; actual server recordings must still pass startup playback checks.
+
+Run `node tests/test_early_rating.cjs` to check frontend stopping, early rating, playback completion, and reset behavior with simulated browser events.

@@ -80,11 +80,12 @@ class RecordedAPITests(unittest.TestCase):
             time.sleep(.01)
         self.fail('Trial did not finish')
 
-    def test_nine_recordings_no_generation_retries_export_and_exhaustion(self):
+    def test_six_recordings_no_generation_retries_export_and_exhaustion(self):
         with patch.object(web.subprocess, 'run', side_effect=self.index) as process:
             with TestClient(web.app) as client:
                 self.assertEqual(client.get('/api/health').json()['audio_mode'], 'recorded')
                 self.assertTrue(client.get('/api/health').json()['ready'])
+                self.assertEqual(client.get('/api/health').json()['total_tempos'], 6)
                 headers = self.join(client)
                 targets, hashes = set(), set()
                 for _ in TEMPOS:
@@ -106,18 +107,32 @@ class RecordedAPITests(unittest.TestCase):
                         rated = client.post('/api/ratings', headers=headers, json={'request_id': trial['id'], 'rating': 4})
                         self.assertEqual(rated.status_code, 200)
                 self.assertEqual(targets, set(TEMPOS))
-                self.assertEqual(len(hashes), 9)
+                self.assertEqual(len(hashes), len(TEMPOS))
                 self.assertTrue(self.trial(client, headers)['complete'])
                 progress = client.get('/api/progress', headers=self.join(client, 'LISTENER')).json()
-                self.assertEqual(progress['rated'], 9)
+                self.assertEqual(progress['rated'], len(TEMPOS))
                 self.assertTrue(progress['complete'])
                 export = client.get('/api/admin/responses.csv', headers={'Authorization': 'Bearer ' + web.cfg.ADMIN_TOKEN})
                 rows = list(csv.reader(io.StringIO(export.text)))
                 self.assertEqual(rows[0], ['username', 'rating', 'tempo'])
-                self.assertEqual(len(rows), 10)
+                self.assertEqual(len(rows), len(TEMPOS)+1)
                 self.assertEqual({float(row[2]) for row in rows[1:]}, set(TEMPOS))
                 self.assertEqual(client.get('/api/admin/responses.csv').status_code, 401)
                 self.assertEqual(process.call_count, 1, 'Only startup indexing may invoke another Python process')
+
+    def test_historical_high_tempo_audio_is_unavailable_but_response_remains(self):
+        with patch.object(web.subprocess, 'run', side_effect=self.index):
+            with TestClient(web.app) as client:
+                headers = self.join(client)
+                key = web.store.identify(headers['Authorization'][7:])
+                request_id = str(uuid.uuid4())
+                with web.store.connect() as c:
+                    c.execute("INSERT INTO trials (id,username_key,target_bpm,seed,status,audio_path,source,label_bpm,created_at) VALUES (?,?,150,1,'rated',?,'recorded-folder',150,0)",
+                              (request_id, key, self.clips[0]['path']))
+                    c.execute('INSERT INTO responses VALUES (?,?,4,150)', (request_id, 'listener'))
+                self.assertEqual(client.get('/api/audio/' + request_id, headers=headers).status_code, 410)
+                self.assertEqual(client.get('/api/progress', headers=headers).json()['rated'], 0)
+                self.assertIn('listener,4,150', web.store.export_csv())
 
     def test_missing_tempo_blocks_trials_before_consuming_tempos(self):
         self.clips.pop()

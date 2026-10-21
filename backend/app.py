@@ -138,7 +138,7 @@ def run_trial(trial):
 
 @app.get('/api/health')
 def health():
-    return {'ready':service_ready,'total_tempos':9,'duration_seconds':30,'audio_mode':'recorded','tempo_source':'folder'}
+    return {'ready':service_ready,'total_tempos':len(TEMPOS),'duration_seconds':30,'audio_mode':'recorded','tempo_source':'folder'}
 
 
 @app.post('/api/start')
@@ -173,6 +173,8 @@ def get_trial(request_id:uuid.UUID,key=Depends(participant)):
 @app.get('/api/audio/{request_id}')
 def get_audio(request_id:uuid.UUID,key=Depends(participant)):
     trial=store.get(str(request_id),key)
+    if trial['target_bpm'] not in TEMPOS:
+        raise HTTPException(410,'This tempo is no longer part of the study. Load the next audio.')
     if trial['status'] not in ('ready','rated') or not trial['audio_path']:
         raise HTTPException(404,'Audio is not ready.')
     path=Path(trial['audio_path']).resolve()

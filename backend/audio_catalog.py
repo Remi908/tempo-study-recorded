@@ -9,7 +9,7 @@ import json
 import re
 from pathlib import Path
 
-TEMPOS=(60,75,90,105,120,135,150,165,180)
+TEMPOS=(60,75,90,105,120,135)
 
 
 def canonical(path):
@@ -47,13 +47,16 @@ def folder_tempo(path, root):
         match = re.fullmatch(r"(?:(?:tempo|bpm)[ _-]*)?(\d+(?:\.0+)?)(?:[ _-]*bpm)?", name.strip(), re.IGNORECASE)
         if match:
             value = int(float(match.group(1)))
-            if value in TEMPOS:
+            if value in (60,75,90,105,120,135,150,165,180):
                 labels.add(value)
     if not labels:
-        raise ValueError('No tempo folder found; use 60, 75, 90, 105, 120, 135, 150, 165 or 180')
+        raise ValueError('No tempo folder found; use 60, 75, 90, 105, 120 or 135')
     if len(labels) != 1:
         raise ValueError('Conflicting tempo folders in path: ' + str(sorted(labels)))
-    return labels.pop()
+    tempo = labels.pop()
+    if tempo not in TEMPOS:
+        raise ValueError('Tempo is outside the active 60–135 BPM range')
+    return tempo
 
 
 def pack(path, cache, tempo):

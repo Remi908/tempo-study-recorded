@@ -22,22 +22,23 @@
   }catch(error){if(error.name==='AbortError')throw new Error('The connection timed out. Please retry; your progress is saved.');throw error;}finally{clearTimeout(timeout);}
  }
  function render(){
-  const p=state.progress;const complete=!!p?.complete;
+  const p=state.progress;const complete=!!p?.complete;const total=p?.total??6;
   $('username').readOnly=state.joined;
   $('join').hidden=state.joined;
   $('join').disabled=state.busy;
   $('generate').disabled=!state.joined||!state.ready||state.busy||complete||(state.current?.status==='ready'&&!state.rated&&!state.retryAudio);
   $('generate').querySelector('span').textContent=complete?'Session finished':state.busy?'Preparing your audio…':state.retryAudio?'Load audio again':state.current&&['queued','generating'].includes(state.current.status)?'Resume audio request':'Load next audio';
   $('button-note').textContent=complete?'Thank you for taking part.':!state.joined?'Enter your username to begin.':!state.ready?'The researcher is preparing the audio service.':state.current?.status==='ready'&&!state.rated?'Listen and rate to continue.':'Your next tempo will be selected automatically.';
-  $('progress').textContent=p?`${p.rated} of 9 responses saved`:'9 listening moments';
-  $('progress-caption').textContent=complete?`All nine tempos attempted · ${p.rated} responses saved`:p?`${p.attempted??p.delivered} of 9 tempos attempted · ${p.remaining??(9-p.delivered)} new tempos left`:'Nine tempos. Nine different moments.';
-  $('progress-dots').replaceChildren(...Array.from({length:9},(_,i)=>{const dot=document.createElement('i');if(i<(p?.rated||0))dot.className='done';return dot;}));
+  $('progress').textContent=p?`${p.rated} of ${total} responses saved`:`${total} listening moments`;
+  $('progress-caption').textContent=complete?`All ${total} tempos attempted · ${p.rated} responses saved`:p?`${p.attempted??p.delivered} of ${total} tempos attempted · ${p.remaining??(total-p.delivered)} new tempos left`:'Six tempos. Six different moments.';
+  $('progress-dots').replaceChildren(...Array.from({length:total},(_,i)=>{const dot=document.createElement('i');if(i<(p?.rated||0))dot.className='done';return dot;}));
+  $('stop-and-rate').disabled=!canStopAndRate();
   choices.forEach(button=>{const value=Number(button.dataset.rating);button.disabled=!state.ended||state.rated||state.saving;button.classList.toggle('chosen',value===state.rating);button.setAttribute('aria-checked',String(value===state.rating));});
   $('submit').disabled=!state.ended||!state.rating||state.rated||state.saving;
   $('submit').textContent=state.saving?'Saving…':state.rated?'Rating saved ✓':'Submit rating ✓';
   $('rating-title').textContent=complete?'Thank you for listening.':state.rated?'Your response is saved.':'How calming did it feel?';
-  $('rating-description').textContent=complete?(p.rated===9?'You’ve heard all nine tempos. Your listening session is complete.':`All nine tempos have been attempted. ${p.rated} responses were saved; some audio requests were unavailable.`):state.rated?'Ready for another moment? A different tempo is waiting.':'There’s no right answer. Go with how this piece felt to you.';
-  $('rating-note').textContent=state.rated?'Your username, rating, and audio tempo have been saved.':state.ended?'Choose the response that feels right.':'Listen to the full clip, then share your response.';
+  $('rating-description').textContent=complete?(p.rated===total?'Your listening session is complete. Thank you for sharing your responses.':`All ${total} tempos have been attempted. ${p.rated} responses were saved; some audio requests were unavailable.`):state.rated?'Ready for another moment? A different tempo is waiting.':'There’s no right answer. Go with how this piece felt to you.';
+  $('rating-note').textContent=state.rated?'Your username, rating, and audio tempo have been saved.':state.ended?'Choose the response that feels right.':'Listen, then select “Stop and rate” whenever you’re ready.';
   $('audio-art').classList.toggle('busy',state.busy);
  }
  async function checkHealth(){
@@ -76,16 +77,18 @@
   try{const trial=await request('trials',{request_id:requestId});if(trial.complete){pendingSet(null);state.progress=trial;state.busy=false;render();return;}state.current=trial;await poll(trial.id);}
   catch(error){state.busy=false;message(error.message);render();}
  });
+ function canStopAndRate(){return state.current?.status==='ready'&&!state.rated&&!state.busy&&!state.saving&&!state.ended&&audio.currentTime>0;}
+ $('stop-and-rate').addEventListener('click',()=>{if(!canStopAndRate())return;audio.pause();state.ended=true;render();choices[0].focus();});
  $('play').addEventListener('click',async()=>{try{if(audio.paused)await audio.play();else audio.pause();}catch{message('Playback could not start. Please try pressing play again.');}});
  audio.addEventListener('play',()=>{$('play').textContent='Ⅱ';$('play').setAttribute('aria-label','Pause audio');$('audio-art').classList.add('is-playing');});
  audio.addEventListener('pause',()=>{$('play').textContent='▶';$('play').setAttribute('aria-label','Play audio');$('audio-art').classList.remove('is-playing');});
  audio.addEventListener('ended',()=>{state.ended=true;render();});
  audio.addEventListener('error',()=>{if(audio.getAttribute('src')){state.retryAudio=true;message('Audio playback failed. Select “Load audio again”.');render();}});
- audio.addEventListener('timeupdate',()=>{const t=Math.floor(audio.currentTime||0);$('elapsed').textContent=`${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;Array.from($('waveform').children).forEach((bar,i)=>bar.classList.toggle('elapsed',i/50<audio.currentTime/30));});
+ audio.addEventListener('timeupdate',()=>{const t=Math.floor(audio.currentTime||0);$('elapsed').textContent=`${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;Array.from($('waveform').children).forEach((bar,i)=>bar.classList.toggle('elapsed',i/50<audio.currentTime/30));$('stop-and-rate').disabled=!canStopAndRate();});
  $('volume').addEventListener('input',()=>{audio.volume=Number($('volume').value);});
  choices.forEach(button=>button.addEventListener('click',()=>{state.rating=Number(button.dataset.rating);render();}));
  $('submit').addEventListener('click',async()=>{
-  if(!state.current||!state.rating||!state.ended||state.rated||state.saving)return;state.saving=true;message('');render();
+  if(!state.current||!state.rating||!state.ended||state.rated||state.saving)return;audio.pause();state.saving=true;message('');render();
   try{const saved=await request('ratings',{request_id:state.current.id,rating:state.rating});state.rating=saved.saved.rating;state.rated=true;state.progress=saved;state.current.status='rated';}
   catch(error){message(error.message);}
   finally{state.saving=false;render();}

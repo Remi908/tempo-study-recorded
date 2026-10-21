@@ -27,9 +27,9 @@ class StudyTests(unittest.TestCase):
         self.assertTrue(self.store.accept(trial['id'],trial['target_bpm']+.2,trial['id'],'test.wav','generated'))
         self.store.rate(trial['username_key'],trial['id'],4)
 
-    def test_exactly_nine_distinct_tempos_and_then_complete(self):
+    def test_exactly_six_distinct_tempos_and_then_complete(self):
         assigned=[]
-        for _ in range(9):
+        for _ in range(len(TEMPOS)):
             trial=self.trial();assigned.append(trial['target_bpm']);self.serve_and_rate(trial)
         self.assertEqual(sorted(assigned),list(TEMPOS))
         with self.assertRaises(Finished):self.trial()
@@ -40,10 +40,10 @@ class StudyTests(unittest.TestCase):
         other=Store(self.path);token,key=other.start('  rEmI  ')
         self.assertEqual(key,self.key)
         remaining=[]
-        for _ in range(8):
+        for _ in range(len(TEMPOS)-1):
             t=other.reserve(key,str(uuid.uuid4()))[0];remaining.append(t['target_bpm']);self.serve_and_rate(t)
         self.assertNotIn(first['target_bpm'],remaining)
-        self.assertEqual(other.progress(key)['rated'],9)
+        self.assertEqual(other.progress(key)['rated'],len(TEMPOS))
 
     def test_simultaneous_tabs_create_one_trial_only(self):
         def request(_):return self.store.reserve(self.key,str(uuid.uuid4()))
@@ -60,17 +60,17 @@ class StudyTests(unittest.TestCase):
         rated,created=self.store.reserve(self.key,t['id'])
         self.assertFalse(created);self.assertEqual(rated['target_bpm'],t['target_bpm'])
 
-    def test_failed_ninth_attempt_ends_session_with_eight_responses(self):
-        for _ in range(8):self.serve_and_rate(self.trial())
+    def test_failed_sixth_attempt_ends_session_with_five_responses(self):
+        for _ in range(len(TEMPOS)-1):self.serve_and_rate(self.trial())
         failed=self.trial();self.store.fail(failed['id'],'No matching fallback')
         with self.assertRaises(Finished):self.trial()
         progress=self.store.progress(self.key)
-        self.assertEqual(progress['delivered'],8)
-        self.assertEqual(progress['attempted'],9)
+        self.assertEqual(progress['delivered'],len(TEMPOS)-1)
+        self.assertEqual(progress['attempted'],len(TEMPOS))
         self.assertEqual(progress['remaining'],0)
         self.assertTrue(progress['complete'])
 
-    def test_all_failed_attempts_are_distinct_and_stop_after_nine(self):
+    def test_all_failed_attempts_are_distinct_and_stop_after_six(self):
         targets=[]
         for _ in TEMPOS:
             trial=self.trial();targets.append(trial['target_bpm'])
@@ -86,15 +86,15 @@ class StudyTests(unittest.TestCase):
         with self.store.connect() as c:
             c.execute('DELETE FROM tempo_slots WHERE trial_id=?',(failed['id'],))
         other=Store(self.path);_,key=other.start('REMI')
-        for _ in range(8):
+        for _ in range(len(TEMPOS)-1):
             t=other.reserve(key,str(uuid.uuid4()))[0]
             self.assertNotEqual(t['target_bpm'],failed['target_bpm'])
             other.fail(t['id'],'No audio')
         with self.assertRaises(Finished):other.reserve(key,str(uuid.uuid4()))
-        self.assertEqual(other.progress(key)['attempted'],9)
+        self.assertEqual(other.progress(key)['attempted'],len(TEMPOS))
 
     def test_last_pending_or_ready_trial_can_still_be_listened_to_and_rated(self):
-        for _ in range(8):
+        for _ in range(len(TEMPOS)-1):
             trial=self.trial();self.store.fail(trial['id'],'No audio')
         last=self.trial()
         self.assertFalse(self.store.progress(self.key)['complete'])
@@ -134,7 +134,7 @@ class StudyTests(unittest.TestCase):
         with self.store.connect() as c:
             slots=list(c.execute('SELECT target_bpm FROM tempo_slots'))
         self.assertEqual({r[0] for r in slots},{t['target_bpm'],pending['target_bpm']})
-        for _ in range(7):
+        for _ in range(len(TEMPOS)-2):
             trial=self.trial()
             self.assertNotIn(trial['target_bpm'],(t['target_bpm'],pending['target_bpm']))
             self.serve_and_rate(trial)
@@ -162,9 +162,9 @@ class StudyTests(unittest.TestCase):
         rows=list(csv.reader(io.StringIO(self.store.export_csv())))
         self.assertEqual(rows[0],['username','rating','tempo']);self.assertEqual(len(rows),2)
 
-    def test_two_usernames_have_independent_nine_tempo_sets(self):
+    def test_two_usernames_have_independent_six_tempo_sets(self):
         _,second=self.store.start('someone_else')
-        for _ in range(9):
+        for _ in range(len(TEMPOS)):
             self.serve_and_rate(self.trial());self.serve_and_rate(self.trial(second))
         self.assertTrue(self.store.progress(second)['complete'])
 

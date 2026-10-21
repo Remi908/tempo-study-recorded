@@ -72,8 +72,8 @@ class CatalogTests(unittest.TestCase):
         root = Path('/recordings')
         for name in ('60', '60 BPM', '60bpm', 'BPM_60', 'tempo-60', '60.0'):
             self.assertEqual(audio_catalog.folder_tempo(root / name / 'take' / 'clip.wav', root), 60)
-        self.assertEqual(audio_catalog.folder_tempo(root / '180' / 'clip.wav', root), 180)
-        for path in ('seed60/clip.wav', 'unknown/60bpm.wav', '70/clip.wav', '60/75/clip.wav'):
+        self.assertEqual(audio_catalog.folder_tempo(root / '135' / 'clip.wav', root), 135)
+        for path in ('seed60/clip.wav', 'unknown/60bpm.wav', '70/clip.wav', '60/75/clip.wav', '150/clip.wav', '165/clip.wav', '180/clip.wav', '60/150/clip.wav'):
             with self.assertRaises(ValueError):
                 audio_catalog.folder_tempo(root / path, root)
 

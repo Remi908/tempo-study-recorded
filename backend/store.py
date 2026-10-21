@@ -11,7 +11,7 @@ import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
 
-TEMPOS = (60, 75, 90, 105, 120, 135, 150, 165, 180)
+TEMPOS = (60, 75, 90, 105, 120, 135)
 TOLERANCE = 5
 
 class StudyError(Exception):
@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS responses (
             columns = {row['name'] for row in c.execute('PRAGMA table_info(trials)')}
             if 'label_bpm' not in columns:
                 c.execute('ALTER TABLE trials ADD COLUMN label_bpm INTEGER')
+            # Retire unfinished trials outside the active set, preserving history.
+            marks = ','.join('?' for _ in TEMPOS)
+            c.execute("UPDATE trials SET status='failed',error=? WHERE target_bpm NOT IN (" + marks + ") AND status IN ('queued','generating','ready')",
+                      ('This tempo is no longer part of the study. Load the next audio.', *TEMPOS))
 
     @contextmanager
     def connect(self):
@@ -97,13 +101,15 @@ CREATE TABLE IF NOT EXISTS responses (
         return r['username_key']
 
     def progress(self, key):
+        marks = ','.join('?' for _ in TEMPOS)
+        params = (key, *TEMPOS)
         with self.connect() as c:
             c.execute('BEGIN')  # one consistent view while another tab may reserve
             name = c.execute('SELECT username FROM participants WHERE username_key=?', (key,)).fetchone()['username']
-            delivered = c.execute("SELECT count(*) FROM trials WHERE username_key=? AND status IN ('ready','rated')", (key,)).fetchone()[0]
-            rated = c.execute('SELECT count(*) FROM responses r JOIN trials t ON t.id=r.trial_id WHERE t.username_key=?', (key,)).fetchone()[0]
-            current = c.execute("SELECT id FROM trials WHERE username_key=? AND status IN ('queued','generating','ready')", (key,)).fetchone()
-            attempted = c.execute('SELECT count(DISTINCT target_bpm) FROM trials WHERE username_key=?', (key,)).fetchone()[0]
+            delivered = c.execute("SELECT count(*) FROM trials WHERE username_key=? AND target_bpm IN (" + marks + ") AND status IN ('ready','rated')", params).fetchone()[0]
+            rated = c.execute('SELECT count(*) FROM responses r JOIN trials t ON t.id=r.trial_id WHERE t.username_key=? AND t.target_bpm IN (' + marks + ')', params).fetchone()[0]
+            current = c.execute("SELECT id FROM trials WHERE username_key=? AND target_bpm IN (" + marks + ") AND status IN ('queued','generating','ready')", params).fetchone()
+            attempted = c.execute('SELECT count(DISTINCT target_bpm) FROM trials WHERE username_key=? AND target_bpm IN (' + marks + ')', params).fetchone()[0]
         return dict(username=name, delivered=delivered, rated=rated, attempted=attempted,
                     remaining=len(TEMPOS)-attempted, total=len(TEMPOS),
                     complete=attempted==len(TEMPOS) and current is None,
@@ -126,7 +132,7 @@ CREATE TABLE IF NOT EXISTS responses (
             used = {row[0] for row in c.execute('SELECT DISTINCT target_bpm FROM trials WHERE username_key=?', (key,))}
             remaining = [bpm for bpm in TEMPOS if bpm not in used]
             if not remaining:
-                raise Finished('All nine tempos have been attempted. Your session is finished. Thank you!')
+                raise Finished('All active tempos have been attempted. Your session is finished. Thank you!')
             if c.execute("SELECT count(*) FROM trials WHERE status IN ('queued','generating')").fetchone()[0] >= 16:
                 raise StudyError('The audio request queue is full. Please try again shortly.')
             bpm = secrets.choice(remaining)
